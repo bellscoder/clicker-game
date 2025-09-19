@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Byte Clicker</title>
+  <link rel="stylesheet" href="css/style.css" />
+</head>
+<body class="theme-light">
+  <header class="topbar">
+    <h1>Byte Clicker</h1>
+    <div class="stats">
+      <div class="stat">
+        <span class="label">Bytes</span>
+        <span id="bytes" class="value">0</span>
+      </div>
+      <div class="stat">
+        <span class="label">B/s</span>
+        <span id="bps" class="value">0</span>
+      </div>
+    </div>
+  </header>
+
+  <main class="layout">
+    <section class="left">
+      <button id="bigClick" class="big-button" aria-label="Click to earn bytes" title="Click!">
+        <span class="big-emoji">🖱️</span>
+        <span id="perClick" class="per-click">+1</span>
+      </button>
+
+      <div class="panels">
+        <details open>
+          <summary>Achievements <span id="achCount" class="pill">0/0</span></summary>
+          <div id="achievements" class="ach-list"></div>
+        </details>
+
+        <details>
+          <summary>Settings</summary>
+          <div class="settings">
+            <label>
+              Theme
+              <select id="theme">
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+              </select>
+            </label>
+            <label>
+              Number format
+              <select id="numfmt">
+                <option value="short">Short (1.2K)</option>
+                <option value="full">Full</option>
+                <option value="sci">Sci (1.2e3)</option>
+              </select>
+            </label>
+            <label>
+              Volume
+              <input id="volume" type="range" min="0" max="1" step="0.01" />
+            </label>
+            <div class="row">
+              <button id="exportBtn">Export save</button>
+              <button id="importBtn">Import save</button>
+              <input id="importInput" type="file" accept=".json" hidden />
+            </div>
+            <button id="resetBtn" class="danger">Hard reset</button>
+          </div>
+        </details>
+      </div>
+    </section>
+
+    <section class="right">
+      <h2>Upgrades</h2>
+      <div id="upgrades" class="grid"></div>
+
+      <h2>Generators</h2>
+      <div id="generators" class="grid"></div>
+    </section>
+  </main>
+
+  <div id="toasts" class="toasts" aria-live="polite" aria-atomic="true"></div>
+
+  <footer class="footer">
+    <span>Made with ❤️ — Byte Clicker</span>
+    <span id="saveStatus">Saved</span>
+  </footer>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+</html>
