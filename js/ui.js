@@ -44,7 +44,7 @@ export function renderUpgrades(state, settings) {
   wrap.innerHTML = '';
   for (const up of UPGRADES) {
     if (up.requires && (state.generators[up.requires]?.owned || 0) <= 0 && !state.upgrades[up.id]) {
-      continue; // hide until relevant
+      continue;
     }
     const owned = !!state.upgrades[up.id];
     const card = document.createElement('div');
@@ -71,7 +71,7 @@ export function renderUpgrades(state, settings) {
           state.perClick *= up.value;
         }
         markDirty();
-        renderAll(state, settings);
+        renderAll(state, settings); // ✅ Refresh UI after upgrade
       }
     });
     wrap.appendChild(card);
@@ -90,64 +90,4 @@ export function renderGenerators(state, settings) {
     card.className = 'card';
     card.innerHTML = `
       <div class="title">
-        <span>${g.emoji} ${g.name}</span>
-        <span class="badge">x${owned}</span>
-      </div>
-      <div class="desc">${g.desc}</div>
-      <div class="meta">
-        <span>B/s: ${format(bps, settings)} each</span>
-        <span>Total: ${format(bps * owned, settings)}</span>
-      </div>
-      <div class="actions">
-        <button class="buy">Buy (${format(cost, settings)})</button>
-      </div>
-    `;
-    const btn = card.querySelector('.buy');
-    btn.disabled = state.bytes < cost;
-    btn.addEventListener('click', () => {
-      if (state.bytes >= cost) {
-        state.bytes -= cost;
-        state.generators[g.id].owned = owned + 1;
-        markDirty();
-        renderAll(state, settings);
-      }
-    });
-    wrap.appendChild(card);
-  }
-}
-
-export function generatorCost(gen, owned) {
-  // classic incremental cost scaling
-  return Math.floor(gen.baseCost * 1.15 ** owned);
-}
-
-export function checkAchievements(state, notify) {
-  let unlocked = 0, total = 0;
-  for (const a of ACHIEVEMENTS) {
-    total++;
-    if (!state.achievements[a.id] && a.cond(state)) {
-      state.achievements[a.id] = true;
-      notify(`Achievement unlocked: ${a.emoji} ${a.name}`, a.desc);
-    }
-    if (state.achievements[a.id]) unlocked++;
-  }
-  const pill = document.getElementById('achCount');
-  if (pill) pill.textContent = `${unlocked}/${total}`;
-}
-
-export function renderAchievementsPanel(state, settings) {
-  const list = document.getElementById('achievements');
-  list.innerHTML = '';
-  for (const a of ACHIEVEMENTS) {
-    const got = !!state.achievements[a.id];
-    const div = document.createElement('div');
-    div.className = 'ach-item';
-    div.innerHTML = `
-      <span>${a.emoji}</span>
-      <span>${a.name}</span>
-      <span class="desc" style="color: var(--muted)">${a.desc}</span>
-      <span class="check">${got ? '✓' : ''}</span>
-    `;
-    list.appendChild(div);
-  }
-}
+        <
