@@ -79,7 +79,7 @@ bigClick.addEventListener('click', () => {
   state.bytes += state.perClick;
   clickSound();
   markDirty();
-  renderHeader(state, settings);
+  renderAll(state, settings); // ✅ UI refresh fix
   checkAchievements(state, notify);
 });
 
@@ -122,12 +122,8 @@ notify('Welcome to Byte Clicker', 'Click to earn bytes. Buy generators and upgra
 
 // helpers
 function setMasterVolume(v) {
-  // Use destination gain via a proxy node
-  // Minimalist approach: scale per-sound envelopes by v
-  // Done in audio nodes; here we just store volume for use
   window.__volume = v;
 }
-const _origClick = (window._clickSound = () => {});
 function proxy(volFunc, fn) {
   return (...args) => {
     const v = (window.__volume ?? settings.volume) || 0;
@@ -135,14 +131,10 @@ function proxy(volFunc, fn) {
     fn(...args);
   };
 }
-// already using envelopes; just gate by volume using proxy:
 const gatedClick = proxy(() => settings.volume, clickSound);
 const gatedToast = proxy(() => settings.volume, toastSound);
 
-// overwrite sounds with gated versions
-window.addEventListener('click', () => {
-  // no-op: ensure context can resume on first gesture
-}, { once: true });
+window.addEventListener('click', () => {}, { once: true });
 
 function notify(title, body) {
   const div = document.createElement('div');
