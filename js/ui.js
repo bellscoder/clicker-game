@@ -1,6 +1,22 @@
 import { ACHIEVEMENTS, GENERATORS, NUMBER_FORMATS, UPGRADES } from './data.js';
 import { markDirty } from './storage.js';
 
+// Debug: log what we imported
+console.log('DBG: GENERATORS length', Array.isArray(GENERATORS) ? GENERATORS.length : GENERATORS);
+console.log('DBG: UPGRADES length', Array.isArray(UPGRADES) ? UPGRADES.length : UPGRADES);
+
+// Optional: show a message in the UI if arrays are empty
+window.addEventListener('DOMContentLoaded', () => {
+  const genWrap = document.getElementById('generators');
+  const upWrap = document.getElementById('upgrades');
+  if (genWrap && Array.isArray(GENERATORS) && GENERATORS.length === 0) {
+    genWrap.innerHTML = '<div class="card">No generators found. Check js/data.js export.</div>';
+  }
+  if (upWrap && Array.isArray(UPGRADES) && UPGRADES.length === 0) {
+    upWrap.innerHTML = '<div class="card">No upgrades found. Check js/data.js export.</div>';
+  }
+});
+
 export function format(n, settings) {
   const f = NUMBER_FORMATS[settings.numfmt] || NUMBER_FORMATS.short;
   return f(n);
