@@ -1,109 +1,43 @@
-import { ACHIEVEMENTS, GENERATORS, NUMBER_FORMATS, UPGRADES } from './data.js';
-import { markDirty } from './storage.js';
+import { gameData } from './data.js';
 
-// Debug: log what we imported
-console.log('DBG: GENERATORS length', Array.isArray(GENERATORS) ? GENERATORS.length : GENERATORS);
-console.log('DBG: UPGRADES length', Array.isArray(UPGRADES) ? UPGRADES.length : UPGRADES);
-
-// Optional: show a message in the UI if arrays are empty
-window.addEventListener('DOMContentLoaded', () => {
-  const genWrap = document.getElementById('generators');
-  const upWrap = document.getElementById('upgrades');
-  if (genWrap && Array.isArray(GENERATORS) && GENERATORS.length === 0) {
-    genWrap.innerHTML = '<div class="card">No generators found. Check js/data.js export.</div>';
-  }
-  if (upWrap && Array.isArray(UPGRADES) && UPGRADES.length === 0) {
-    upWrap.innerHTML = '<div class="card">No upgrades found. Check js/data.js export.</div>';
-  }
-});
-
-export function format(n, settings) {
-  const f = NUMBER_FORMATS[settings.numfmt] || NUMBER_FORMATS.short;
-  return f(n);
+export function updateUI() {
+    document.getElementById('bytes').textContent = Math.floor(window.gameState.bytes);
+    document.getElementById('bytesPerSecond').textContent = window.gameState.bytesPerSecond;
+    document.getElementById('clickValue').textContent = window.gameState.bytesPerClick;
 }
 
-export function renderAll(state, settings) {
-  renderHeader(state, settings);
-  renderUpgrades(state, settings);
-  renderGenerators(state, settings);
-  renderAchievementsPanel(state, settings);
-}
-
-export function renderHeader(state, settings) {
-  document.getElementById('bytes').textContent = format(state.bytes, settings);
-  document.getElementById('bps').textContent = format(totalBps(state), settings);
-  document.getElementById('perClick').textContent = `+${format(state.perClick, settings)}`;
-}
-
-export function totalBps(state) {
-  let total = 0;
-  for (const g of GENERATORS) {
-    const owned = state.generators[g.id]?.owned || 0;
-    const mult = getGenMultiplier(state, g.id);
-    total += owned * g.bps * mult;
-  }
-  return total;
-}
-
-export function getGenMultiplier(state, genId) {
-  let m = 1;
-  for (const up of UPGRADES) {
-    if (state.upgrades[up.id] && up.type === 'mult_gen' && up.gen === genId) {
-      m *= up.value;
-    }
-  }
-  return m;
-}
-
-export function renderUpgrades(state, settings) {
-  const wrap = document.getElementById('upgrades');
-  wrap.innerHTML = '';
-  for (const up of UPGRADES) {
-    if (up.requires && (state.generators[up.requires]?.owned || 0) <= 0 && !state.upgrades[up.id]) {
-      continue;
-    }
-    const owned = !!state.upgrades[up.id];
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML = `
-      <div class="title">
-        <span>${up.emoji} ${up.name}</span>
-        ${owned ? '<span class="badge">Owned</span>' : ''}
-      </div>
-      <div class="desc">${up.desc}</div>
-      <div class="meta">
-        <span>Cost: ${format(up.cost, settings)}</span>
-        <span>${owned ? 'Purchased' : ''}</span>
-      </div>
-      <div class="actions">
-        <button class="buy" ${owned ? 'disabled' : ''}>Buy</button>
-      </div>
+export function createShopItem(item, type) {
+    const div = document.createElement('div');
+    div.className = 'shop-item';
+    
+    const canAfford = window.gameState.bytes >= item.cost;
+    const isPurchased = type === 'upgrade' && window.gameState.upgrades[item.id];
+    const owned = type === 'generator' ? (window.gameState.generators[item.id] || 0) : 0;
+    
+    if (!canAfford) div.classList.add('disabled');
+    if (isPurchased) div.classList.add('purchased');
+    
+    div.innerHTML = `
+        <div class="item-header">
+            <span class="item-name">${item.name}</span>
+            <span class="item-cost">${item.cost} bytes</span>
+        </div>
+        <div class="item-effect">${item.effect}</div>
+        ${type === 'generator' && owned > 0 ? `<div class="item-owned">Owned: ${owned}</div>` : ''}
     `;
-    card.querySelector('.buy').addEventListener('click', () => {
-      if (!owned && state.bytes >= up.cost) {
-        state.bytes -= up.cost;
-        state.upgrades[up.id] = true;
-        if (up.type === 'mult_click') {
-          state.perClick *= up.value;
-        }
-        markDirty();
-        renderAll(state, settings); // ✅ Refresh UI after upgrade
-      }
-    });
-    wrap.appendChild(card);
-  }
+    
+    return div;
 }
 
-export function renderGenerators(state, settings) {
-  const wrap = document.getElementById('generators');
-  wrap.innerHTML = '';
-  for (const g of GENERATORS) {
-    const owned = state.generators[g.id]?.owned || 0;
-    const mult = getGenMultiplier(state, g.id);
-    const bps = g.bps * mult;
-    const cost = generatorCost(g, owned);
-    const card = document.createElement('div');
-    card.className = 'card';
-    card.innerHTML = `
-      <div class="title">
-        <
+export function showAchievement(title, description) {
+    const achievement = document.createElement('div');
+    achievement.className = 'achievement';
+    achievement.innerHTML = `
+        <h3>${title}</h3>
+        <p>${description}</p>
+    `;
+    
+    document.getElementById('achievements').appendChild(achievement);
+    
+    setTimeout(() => achievement.remove(), 5000);
+}
