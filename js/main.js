@@ -1,162 +1,136 @@
-import { DEFAULT_STATE, DEFAULT_SETTINGS } from './data.js';
-import { load, save, loadSettings, saveSettings, exportSave, importSave, markDirty } from './storage.js';
-import { createClickOsc, createToastOsc } from './audio.js';
-import { checkAchievements, format, renderAll, renderHeader, totalBps } from './ui.js';
+import { gameData } from './data.js';
+import { loadGame, saveGame, getGameState } from './storage.js';
+import { playClickSound } from './audio.js';
+import { updateUI, createShopItem, showAchievement } from './ui.js';
 
-let state = load();
-let settings = loadSettings();
+let gameState = getGameState();
+let lastSave = Date.now();
+let achievements = new Set();
 
-applyTheme(settings.theme);
-
-const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-const clickSound = createClickOsc(audioCtx);
-const toastSound = createToastOsc(audioCtx);
-audioCtx.suspend(); // will resume on first user gesture
-
-// DOM
-const bigClick = document.getElementById('bigClick');
-const themeSel = document.getElementById('theme');
-const numfmtSel = document.getElementById('numfmt');
-const volumeRange = document.getElementById('volume');
-const exportBtn = document.getElementById('exportBtn');
-const importBtn = document.getElementById('importBtn');
-const importInput = document.getElementById('importInput');
-const resetBtn = document.getElementById('resetBtn');
-const toasts = document.getElementById('toasts');
-
-// init settings UI
-themeSel.value = settings.theme;
-numfmtSel.value = settings.numfmt;
-volumeRange.value = settings.volume;
-
-themeSel.addEventListener('change', () => {
-  settings.theme = themeSel.value;
-  saveSettings(settings);
-  applyTheme(settings.theme);
-});
-numfmtSel.addEventListener('change', () => {
-  settings.numfmt = numfmtSel.value;
-  saveSettings(settings);
-  renderHeader(state, settings);
-});
-volumeRange.addEventListener('input', () => {
-  settings.volume = parseFloat(volumeRange.value);
-  audioCtx.resume();
-  setMasterVolume(settings.volume);
-  saveSettings(settings);
-});
-
-// export/import/reset
-exportBtn.addEventListener('click', () => exportSave(state));
-importBtn.addEventListener('click', () => importInput.click());
-importInput.addEventListener('change', async (e) => {
-  const file = e.target.files?.[0];
-  if (!file) return;
-  try {
-    const data = await importSave(file);
-    state = { ...DEFAULT_STATE(), ...data }; // conservative merge
-    notify('Save imported', 'Welcome back!');
-    renderAll(state, settings);
-    save(state);
-  } catch {
-    notify('Import failed', 'Invalid file.');
-  } finally {
-    importInput.value = '';
-  }
-});
-resetBtn.addEventListener('click', () => {
-  if (confirm('Hard reset? This will erase your progress.')) {
-    state = DEFAULT_STATE();
-    notify('Progress reset', 'Fresh start!');
-    renderAll(state, settings);
-    save(state);
-  }
-});
-
-// click handling
-bigClick.addEventListener('click', () => {
-  audioCtx.resume();
-  state.bytes += state.perClick;
-  clickSound();
-  markDirty();
-  renderAll(state, settings); // ✅ UI refresh fix
-  checkAchievements(state, notify);
-});
-
-// keyboard: Space to click
-window.addEventListener('keydown', (e) => {
-  if (e.code === 'Space') {
-    e.preventDefault();
-    bigClick.click();
-  }
-});
-
-// loop: tick BPS
-let lastTick = performance.now();
-function tick(now) {
-  const dt = (now - lastTick) / 1000;
-  lastTick = now;
-  const bps = totalBps(state);
-  if (bps > 0) {
-    state.bytes += bps * dt;
-    markDirty();
-    renderHeader(state, settings);
-  }
-  checkAchievements(state, notify);
-  requestAnimationFrame(tick);
-}
-requestAnimationFrame(tick);
-
-// offline progress
-applyOfflineProgress();
-
-// autosave
-setInterval(() => save(state), 10000);
-document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'hidden') save(state);
-});
-
-// initial render
-renderAll(state, settings);
-notify('Welcome to Byte Clicker', 'Click to earn bytes. Buy generators and upgrades!');
-
-// helpers
-function setMasterVolume(v) {
-  window.__volume = v;
-}
-function proxy(volFunc, fn) {
-  return (...args) => {
-    const v = (window.__volume ?? settings.volume) || 0;
-    if (v <= 0) return;
-    fn(...args);
-  };
-}
-const gatedClick = proxy(() => settings.volume, clickSound);
-const gatedToast = proxy(() => settings.volume, toastSound);
-
-window.addEventListener('click', () => {}, { once: true });
-
-function notify(title, body) {
-  const div = document.createElement('div');
-  div.className = 'toast';
-  div.innerHTML = `<strong>${title}</strong><br><span style="color: var(--muted)">${body}</span>`;
-  toasts.appendChild(div);
-  gatedToast();
-  setTimeout(() => { div.remove(); }, 3000);
+function init() {
+    loadGame();
+    setupEventListeners();
+    renderShop();
+    gameLoop();
+    checkAchievements();
 }
 
-function applyTheme(theme) {
-  document.body.classList.toggle('theme-dark', theme === 'dark');
-  document.body.classList.toggle('theme-light', theme !== 'dark');
+function setupEventListeners() {
+    const clickButton = document.getElementById('clickButton');
+    clickButton.addEventListener('click', handleClick);
+    
+    // Visual feedback
+    clickButton.addEventListener('mousedown', () => {
+        clickButton.style.transform = 'scale(0.95)';
+    });
+    
+    clickButton.addEventListener('mouseup', () => {
+        clickButton.style.transform = 'scale(1)';
+    });
 }
 
-function applyOfflineProgress() {
-  const now = Date.now();
-  const elapsed = Math.max(0, (now - (state.lastSave || now)) / 1000);
-  const bps = totalBps(state);
-  const gain = bps * elapsed;
-  if (gain > 0) {
-    state.bytes += gain;
-    notify('Offline gains', `You earned ${format(gain, settings)} bytes while away.`);
-  }
+function handleClick() {
+    gameState.bytes += gameState.bytesPerClick;
+    playClickSound();
+    showClickValue();
+    updateUI();
+    checkAchievements();
 }
+
+function showClickValue() {
+    const clickValue = document.createElement('span');
+    clickValue.className = 'click-value';
+    clickValue.innerHTML = `+${gameState.bytesPerClick}`;
+    document.querySelector('.click-button').appendChild(clickValue);
+    
+    setTimeout(() => clickValue.remove(), 1000);
+}
+
+function renderShop() {
+    const upgradesList = document.getElementById('upgradesList');
+    const generatorsList = document.getElementById('generatorsList');
+    
+    upgradesList.innerHTML = '';
+    generatorsList.innerHTML = '';
+    
+    gameData.upgrades.forEach(upgrade => {
+        const element = createShopItem(upgrade, 'upgrade');
+        element.addEventListener('click', () => purchaseUpgrade(upgrade));
+        upgradesList.appendChild(element);
+    });
+    
+    gameData.generators.forEach(generator => {
+        const element = createShopItem(generator, 'generator');
+        element.addEventListener('click', () => purchaseGenerator(generator));
+        generatorsList.appendChild(element);
+    });
+}
+
+function purchaseUpgrade(upgrade) {
+    if (gameState.bytes >= upgrade.cost && !gameState.upgrades[upgrade.id]) {
+        gameState.bytes -= upgrade.cost;
+        gameState.upgrades[upgrade.id] = true;
+        gameState.bytesPerClick = Math.floor(gameState.bytesPerClick * upgrade.multiplier);
+        updateUI();
+        renderShop();
+        checkAchievements();
+    }
+}
+
+function purchaseGenerator(generator) {
+    if (gameState.bytes >= generator.cost) {
+        gameState.bytes -= generator.cost;
+        gameState.generators[generator.id] = (gameState.generators[generator.id] || 0) + 1;
+        calculateBytesPerSecond();
+        updateUI();
+        renderShop();
+        checkAchievements();
+    }
+}
+
+function calculateBytesPerSecond() {
+    let bps = 0;
+    gameData.generators.forEach(generator => {
+        const owned = gameState.generators[generator.id] || 0;
+        bps += generator.production * owned;
+    });
+    gameState.bytesPerSecond = bps;
+}
+
+function gameLoop() {
+    const now = Date.now();
+    const delta = (now - gameState.lastUpdate) / 1000;
+    
+    gameState.bytes += gameState.bytesPerSecond * delta;
+    gameState.lastUpdate = now;
+    
+    updateUI();
+    
+    // Auto-save every 10 seconds
+    if (now - lastSave > 10000) {
+        saveGame(gameState);
+        lastSave = now;
+    }
+    
+    requestAnimationFrame(gameLoop);
+}
+
+function checkAchievements() {
+    const milestones = [
+        { bytes: 100, title: 'First Steps', desc: 'Reached 100 bytes!' },
+        { bytes: 1000, title: 'Kilobyte King', desc: 'Reached 1,000 bytes!' },
+        { bytes: 10000, title: 'Data Hoarder', desc: 'Reached 10,000 bytes!' },
+        { bytes: 100000, title: 'Byte Boss', desc: 'Reached 100,000 bytes!' },
+        { bytes: 1000000, title: 'Megabyte Master', desc: 'Reached 1,000,000 bytes!' }
+    ];
+    
+    milestones.forEach(milestone => {
+        if (gameState.bytes >= milestone.bytes && !achievements.has(milestone.title)) {
+            achievements.add(milestone.title);
+            showAchievement(milestone.title, milestone.desc);
+        }
+    });
+}
+
+// Start the game
+init();
