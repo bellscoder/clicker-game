@@ -1,47 +1,47 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Byte Clicker</title>
-  <link rel="stylesheet" href="css/style.css" />
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Byte Clicker</title>
+    <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
-  <div id="game">
-    <div id="header">
-      <h1>Byte Clicker</h1>
-      <div>Bytes: <span id="bytes">0</span></div>
-      <div>Bytes/sec: <span id="bps">0</span></div>
-      <div>Per click: <span id="perClick">+1</span></div>
+    <div class="container">
+        <header>
+            <h1>Byte Clicker</h1>
+            <div class="stats">
+                <div class="byte-count">
+                    <span id="bytes">0</span> bytes
+                </div>
+                <div class="per-second">
+                    <span id="bytesPerSecond">0</span> bytes/sec
+                </div>
+            </div>
+        </header>
+
+        <main>
+            <button id="clickButton" class="click-button">
+                <span class="button-text">GENERATE BYTES</span>
+                <span class="click-value">+<span id="clickValue">1</span></span>
+            </button>
+
+            <div class="achievements" id="achievements"></div>
+
+            <div class="shop-container">
+                <section class="upgrades">
+                    <h2>Upgrades</h2>
+                    <div id="upgradesList" class="items-list"></div>
+                </section>
+
+                <section class="generators">
+                    <h2>Generators</h2>
+                    <div id="generatorsList" class="items-list"></div>
+                </section>
+            </div>
+        </main>
     </div>
-    <button id="bigClick">🖱️ Click!</button>
-    <div id="generators" class="grid"></div>
-    <div id="upgrades" class="grid"></div>
-    <div id="settings">
-      <h2>Settings</h2>
-      <label>Theme:
-        <select id="theme">
-          <option value="light">Light</option>
-          <option value="dark">Dark</option>
-        </select>
-      </label>
-      <label>Number format:
-        <select id="numfmt">
-          <option value="short">Short</option>
-          <option value="full">Full</option>
-          <option value="sci">Scientific</option>
-        </select>
-      </label>
-      <label>Volume:
-        <input type="range" id="volume" min="0" max="1" step="0.01" />
-      </label>
-      <button id="exportBtn">Export Save</button>
-      <button id="importBtn">Import Save</button>
-      <input type="file" id="importInput" style="display:none" />
-      <button id="resetBtn">Hard Reset</button>
-    </div>
-    <div id="toasts"></div>
-  </div>
-  <script type="module" src="js/main.js"></script>
+
+    <script type="module" src="js/main.js"></script>
 </body>
 </html>
