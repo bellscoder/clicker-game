@@ -4,6 +4,8 @@ import { playClickSound } from './audio.js';
 import { updateUI, createShopItem, showAchievement } from './ui.js';
 
 let gameState = getGameState();
+window.gameState = gameState;
+
 let lastSave = Date.now();
 let achievements = new Set();
 
